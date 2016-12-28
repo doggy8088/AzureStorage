@@ -24,6 +24,7 @@ namespace DataTableStorage1Sample
     using System.Collections.Generic;
     using System.Net;
     using System.Threading.Tasks;
+    using System.Linq;
 
     /// <summary>
     /// Azure Table Service Sample - Demonstrates how to perform common tasks using the Microsoft Azure Table storage 
@@ -304,28 +305,39 @@ namespace DataTableStorage1Sample
         private static async Task PartitionRangeQueryAsync(CloudTable table, string partitionKey, string startRowKey, string endRowKey)
         {
             // Create the range query using the fluid API 
-            TableQuery<CustomerEntity> rangeQuery = new TableQuery<CustomerEntity>().Where(
-                TableQuery.CombineFilters(
-                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey),
-                        TableOperators.And,
-                        TableQuery.CombineFilters(
-                            TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, startRowKey),
-                            TableOperators.And,
-                            TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, endRowKey))));
+            //TableQuery<CustomerEntity> rangeQuery = new TableQuery<CustomerEntity>().Where(
+            //    TableQuery.CombineFilters(
+            //            TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey),
+            //            TableOperators.And,
+            //            TableQuery.CombineFilters(
+            //                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, startRowKey),
+            //                TableOperators.And,
+            //                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, endRowKey))));
 
-            // Page through the results - requesting 50 results at a time from the server. 
-            TableContinuationToken token = null;
-            rangeQuery.TakeCount = 50;
-            do
+            //// Page through the results - requesting 50 results at a time from the server. 
+            //TableContinuationToken token = null;
+            //rangeQuery.TakeCount = 50;
+            //do
+            //{
+            //    TableQuerySegment<CustomerEntity> segment = await table.ExecuteQuerySegmentedAsync(rangeQuery, token);
+            //    token = segment.ContinuationToken;
+            //    foreach (CustomerEntity entity in segment)
+            //    {
+            //        Console.WriteLine("Customer: {0},{1}\t{2}\t{3}", entity.PartitionKey, entity.RowKey, entity.Email, entity.PhoneNumber);
+            //    }
+            //}
+            //while (token != null);
+
+            var data = from customer in table.CreateQuery<CustomerEntity>()
+                       where customer.PartitionKey.Equals(partitionKey)
+                             && string.Compare(customer.RowKey, startRowKey, StringComparison.Ordinal) >= 0
+                             && string.Compare(customer.RowKey, endRowKey, StringComparison.Ordinal) <= 0
+                       select customer;
+            foreach (var entity in data)
             {
-                TableQuerySegment<CustomerEntity> segment = await table.ExecuteQuerySegmentedAsync(rangeQuery, token);
-                token = segment.ContinuationToken;
-                foreach (CustomerEntity entity in segment)
-                {
-                    Console.WriteLine("Customer: {0},{1}\t{2}\t{3}", entity.PartitionKey, entity.RowKey, entity.Email, entity.PhoneNumber);
-                }
+                Console.WriteLine("Customer: {0},{1}\t{2}\t{3}", entity.PartitionKey, entity.RowKey, entity.Email, entity.PhoneNumber);
             }
-            while (token != null);
+
         }
 
         /// <summary>
